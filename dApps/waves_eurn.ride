@@ -53,6 +53,8 @@ let shareAssetSupply = this.getIntegerValue(keyShareAssetSupply)
 let commission = 3000 # commission/commissionScaleDelimiter = 0.003
 let commissionGovernance = 1200 # commissionGovernance/commissionScaleDelimiter = 0.0012
 let commissionScaleDelimiter = 1000000
+let maxFeeAmountUSDN = 270000
+let maxFeeAmountWaves = 900000
 
 let scaleValue3 = 1000
 let scaleValue8 = 100000000
@@ -359,6 +361,9 @@ func takeIntoAccountExtraFunds(amountLeave: Int) = {
 @Verifier(tx)
 func verify() = match tx {
     case invoke: InvokeScriptTransaction =>
+        let feeIsOk = if ((invoke.feeAssetId == unit && invoke.fee <= maxFeeAmountWaves)
+            || (invoke.feeAssetId == USDN && invoke.fee <= maxFeeAmountUSDN)) then true
+            else false
         let callTakeIntoAccount = invoke.dApp == this && invoke.function == "takeIntoAccountExtraFunds"
         let callStakingUsdnOrNsbt =
             invoke.dApp == stakingAddressUsdnAndNsbt
@@ -378,7 +383,7 @@ func verify() = match tx {
             || sigVerify(tx.bodyBytes, tx.proofs[0], adminPubKey3)
             || sigVerify(tx.bodyBytes, tx.proofs[0], adminPubKeyStaking)
 
-        (callTakeIntoAccount || callStakingUsdnOrNsbt || callStakingDeFo) && signedByAdmin
+        (callTakeIntoAccount || callStakingUsdnOrNsbt || callStakingDeFo) && signedByAdmin && feeIsOk
     case _ => {
         let adminPubKey1Signed = if sigVerify(tx.bodyBytes, tx.proofs[0], adminPubKey1) then 1 else 0
         let adminPubKey2Signed = if sigVerify(tx.bodyBytes, tx.proofs[1], adminPubKey2) then 1 else 0

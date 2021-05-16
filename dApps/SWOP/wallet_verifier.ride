@@ -9,19 +9,26 @@ let adminInvoke = base58'Czn4yoAuUZCVCLJDRfskn8URfkwpknwBTZDbs1wFrY7h'
 let adminPubKey1 = base58'DXDY2itiEcYBtGkVLnkpHtDFyWQUkoLJz79uJ7ECbMrA'
 let adminPubKey2 = base58'E6Wa1SGoktYcjHjsKrvjMiqJY3SWmGKcD8Q5L8kxSPS7'
 let adminPubKey3 = base58'AZmWJtuy4GeVrMmJH4hfFBRApe1StvhJSk4jcbT6bArQ'
+let USDN = base58'DG2xFkPdDwKUoBkzGAhQtLpSGzfXLiCYPEzeKH2Ad24p'
+
+let maxFeeAmountUSDN = 270000
+let maxFeeAmountWaves = 900000
 
 let keyPrefixPoolName = "pool_"
 
 @Verifier(tx)
 func verify() = match tx {
   case invoke: InvokeScriptTransaction => {
+    let feeIsOk = if ((invoke.feeAssetId == unit && invoke.fee <= maxFeeAmountWaves)
+        || (invoke.feeAssetId == USDN && invoke.fee <= maxFeeAmountUSDN)) then true
+        else false
     let isExchangeCall = oracleAddress.getString(keyPrefixPoolName + invoke.dApp.addressFromRecipient().toString()).isDefined() && invoke.function == "exchange"
     let isAirdropCall = invoke.dApp == governanceAddress && invoke.function == "airDrop"
     let isUpdateWeightsCall = invoke.dApp == governanceAddress && invoke.function == "updateWeights"
     let isUpdatePoolInterest = invoke.dApp == farmingAddress && invoke.function == "updatePoolInterest"
     let signedByAdmin = sigVerify(tx.bodyBytes, tx.proofs[0], adminInvoke)
 
-    (((isExchangeCall || isAirdropCall) && invoke.payments.size() == 1) || ((isUpdateWeightsCall || isUpdatePoolInterest) && invoke.payments.size() == 0)) && signedByAdmin
+    (((isExchangeCall || isAirdropCall) && invoke.payments.size() == 1) || ((isUpdateWeightsCall || isUpdatePoolInterest) && invoke.payments.size() == 0)) && signedByAdmin && feeIsOk
   }
   case _ => {
     let adminPubKey1Signed = if sigVerify(tx.bodyBytes, tx.proofs[0], adminPubKey1) then 1 else 0

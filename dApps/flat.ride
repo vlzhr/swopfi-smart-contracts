@@ -28,6 +28,8 @@ let stakingAddress = Address(base58'3PNikM6yp4NqcSU8guxQtmR5onr2D4e8yTJ')
 
 let USDN = base58'DG2xFkPdDwKUoBkzGAhQtLpSGzfXLiCYPEzeKH2Ad24p'
 let stakingFeeInUSDN = 9 * assetInfo(USDN).value().minSponsoredFee.value() # sponsored fee for invoke called from scripted account
+let maxFeeAmountUSDN = 270000
+let maxFeeAmountWaves = 900000
 
 let isActive = this.getBooleanValue(kActive)
 
@@ -486,6 +488,9 @@ func takeIntoAccountExtraFunds(amountLeave: Int) = {
 @Verifier(tx)
 func verify() = match tx {
     case invoke: InvokeScriptTransaction =>
+        let feeIsOk = if ((invoke.feeAssetId == unit && invoke.fee <= maxFeeAmountWaves)
+            || (invoke.feeAssetId == USDN && invoke.fee <= maxFeeAmountUSDN)) then true
+            else false
         let callTakeIntoAccount = invoke.dApp == this && invoke.function == "takeIntoAccountExtraFunds"
         let callStaking =
             invoke.dApp == stakingAddress
@@ -499,7 +504,7 @@ func verify() = match tx {
             || sigVerify(tx.bodyBytes, tx.proofs[0], adm3)
             || sigVerify(tx.bodyBytes, tx.proofs[0], admStaking)
 
-        (callTakeIntoAccount || callStaking) && signedByAdmin
+        (callTakeIntoAccount || callStaking) && signedByAdmin && feeIsOk
     case _ => {
         let adm1Signed = if sigVerify(tx.bodyBytes, tx.proofs[0], adm1) then 1 else 0
         let adm2Signed = if sigVerify(tx.bodyBytes, tx.proofs[1], adm2) then 1 else 0
