@@ -1,24 +1,32 @@
 package SWOP;
 
 import com.wavesplatform.crypto.Crypto;
+import com.wavesplatform.transactions.DataTransaction;
 import com.wavesplatform.transactions.account.PrivateKey;
-import com.wavesplatform.transactions.common.AssetId;
 import dapps.GovernanceDApp;
 import dapps.VotingDApp;
 import im.mak.paddle.Account;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.TestMethodOrder;
+import im.mak.paddle.DataParams;
+import im.mak.paddle.api.TxInfo;
+import im.mak.paddle.exceptions.ApiError;
+import com.wavesplatform.transactions.common.AssetId;
+import com.wavesplatform.transactions.data.IntegerEntry;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Stream;
 
-import static im.mak.paddle.Node.node;
 import static im.mak.paddle.token.Waves.WAVES;
 import static im.mak.paddle.util.Async.async;
+import static im.mak.paddle.Node.node;
+import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -27,6 +35,7 @@ public class VotingLiteTest {
     static final long firstCallerInitAmount = 1000_00000000L;
     static final long secondCallerInitAmount = 1000_00000000L;
     static final int fullDuration = 1443;
+    static final int periodLength = 5;
     static final String keyRewardPoolFractionCurrent = "_current_pool_fraction_reward";
     static final String keyRewardPoolFractionPrevious = "_previous_pool_fraction_reward";
     static final String keyRewardUpdateHeight = "reward_update_height";
@@ -92,7 +101,7 @@ public class VotingLiteTest {
                         .integer(keyRewardUpdateHeight, node().getHeight())),
                 () -> voting.writeData(d -> d
                         .integer(kBasePeriod, 0)
-                        .integer(kPeriodLength, 10102)
+                        .integer(kPeriodLength, periodLength)
                         .integer(kStartHeight, node().getHeight())
                         .integer(kDurationFullVotePower, fullDuration)
                         .integer(kMinVotePower, 10000000))
@@ -133,27 +142,27 @@ public class VotingLiteTest {
 
     static Stream<Arguments> initAndResultStateProvider() {
         return Stream.of(
-                Arguments.of(true, firstPool, 0, 1L, 1_00000000L, 1,
+                Arguments.of(true, firstPool, 0, 1L, 1_00000000L, 0,
                         "1200", "123000", "12340000", "1234500000", null,
-                        100, "1_1_0_1", "121801_0_0", "12338801_12338801_0", "1234498801_1234498801_0"),
-                Arguments.of(true, firstPool, 0, 1L, 1_00000000L, 1,
-                        "1200", "123000", "12340000", "1234500000_1234500000_0", null,
-                        100, "1_1_0_1", "121801_0_0", "12338801_12338801_0", "1234498801_1234498801_0"),
-                Arguments.of(true, firstPool, 0, 1L, 1_00000000L, 1,
-                        "1200", "123000", "12340000_12340000_0", "1234500000_1234500000_0", null,
-                        100, "1_1_0_1", "121801_0_0", "12338801_12338801_0", "1234498801_1234498801_0"),
-                Arguments.of(true, firstPool, 0, 1L, 1_00000000L, 1,
-                        "1200", "123000_0_0", "12340000_12340000_0", "1234500000_1234500000_0", null,
-                        100, "1_1_0_1", "121801_0_0", "12338801_12338801_0", "1234498801_1234498801_0"),
+                        100, "1_1_1_1200", "121801_1199_1", "12338801_12338801_1", "1234498801_1234498801_1"),
+                Arguments.of(true, firstPool, 0, 1L, 1_00000000L, 0,
+                        "1200", "123000", "12340000", "1234500000", null,
+                        100, "1_1_1_1200", "121801_1199_1", "12338801_12338801_1", "1234498801_1234498801_1"),
+                Arguments.of(true, firstPool, 0, 1L, 1_00000000L, 0,
+                        "1200", "123000", "12340000", "1234500000", null,
+                        100, "1_1_1_1200", "121801_1199_1", "12338801_12338801_1", "1234498801_1234498801_1"),
+                Arguments.of(true, firstPool, 0, 1L, 1_00000000L, 0,
+                        "1200", "123000", "12340000", "1234500000", null,
+                        100, "1_1_1_1200", "121801_1199_1", "12338801_12338801_1", "1234498801_1234498801_1"),
                 Arguments.of(true, firstPool, 0, 1L, 1_00000000L, 1,
                         null, null, "12340000_12340000_0", "1234500000_1234500000_0", null,
-                        100, "1_1_0_1", "1_1_0", "12340001_12340001_0", "1234500001_1234500001_0"),
+                        100, "1_1_1_1200", "1_1199_1", "12340001_12340001_1", "1234500001_1234500001_1"),
                 Arguments.of(true, firstPool, 0, 1L, 1_00000000L, 1,
                         "1200_1200_0_1200", "123000_0_0", "12340000_12340000_0", "1234500000_1234500000_0", null,
-                        100, "1_1_0_1", "121801_0_0", "12338801_12338801_0", "1234498801_1234498801_0"),
+                        100, "1_1_1_1200", "121801_1199_1", "12338801_12338801_1", "1234498801_1234498801_1"),
                 Arguments.of(true, firstPool, 0, 0L, 1_00000000L, 1,
                         "1200_1200_1_1200", "123000_0_1", "12340000_12340000_1", "1234500000_1234500000_1", null,
-                        100, "0_0_0_0", "121801_0_0", "12338800_12338801_0", "1234498800_1234498801_0"),
+                        100, "0_0_1_1200", "121801_1200_1", "12338800_12338801_1", "1234498800_1234498801_1"),
                 Arguments.of(false, fakePool, 0, 1L, 1_00000000L, 1,
                         "1200_1200_0_1200", "123000_0_0", "12340000_12340000_0", "1234500000_1234500000_0", null,
                         100, "0_0_0_0", "121801_0_0", "12338800_12338801_0", "1234498800_1234498801_0"),
@@ -165,23 +174,23 @@ public class VotingLiteTest {
                         100, "10000000001200_10000000001200_1_10000100001200", "10000000123000_10000000123000_1", "10000012340000_10000012340000_1", "10001234500000_10001234500000_1"),
                 Arguments.of(true, firstPool, 0, 100001_00000000L, 100001_00000000L, 1,
                         "10000000001200_10000000001200_1_10", "10000000123000_10000000123000_1", "10000012340000_10000012340000_1", "10001234500000_10001234500000_1", null,
-                        100, "10000000001200_10000000001200_1_10000100001200", "10000000123000_10000000123000_1", "10000012340000_10000012340000_1", "10001234500000_10001234500000_1"),
+                        100, "10000100001200_10000100001200_1_10000100001200", "10000100123000_10000100123000_1", "10000112340000_10000112340000_1", "10001334500000_10001334500000_1"),
                 Arguments.of(true, firstPool, 0, 1_00000000L, 100_00000000L, fullDuration-1,
                         null, null, "12340000_12340000_1", "1234500000_1234500000_1", null,
-                        100, "100000000_100000000_0_100000000", "100000000_0_0", "1012340000_1012340000_0", "11234500000_11234500000_0"),
+                        100, "100000000_100000000_1_100000000", "100000000_0_1", "1012340000_1012340000_1", "11234500000_11234500000_0"),
                 Arguments.of(true, firstPool, 0, 1_00000000L, 100_00000000L, fullDuration,
                         null, null, "12340000_12340000_1", "1234500000_1234500000_1", null,
-                        100, "10000000_99999987_1_10000000", "99999987_0_1", "1012340000_1012339987_0", "11234500000_11234499987_0"),
+                        100, "10000000_99999987_1_10000000", "99999987_0_1", "1012340000_1012339987_1", "11234500000_11234499987_1"),
                 Arguments.of(true, firstPool, 0, 1_00000000L, 100_00000000L, fullDuration,
                         "1200_1200_1_1200", "123000_0_1", "12340000_12340000_1", "1234500000_1234500000_1", null,
-                        100, "10000000_99999989_1_10000000", "100000000_0_1", "1012340000_1012339989_0", "11234500000_11234499989_0"),
+                        100, "10000000_99999989_1_10000000", "100000000_0_1", "1012340000_1012339989_1", "11234500000_11234499989_1"),
                 Arguments.of(true, firstPool, 0, 1_00000000L, 100_00000000L, fullDuration-1,
                         null, null, "12340000_12340000_1", "1234500000_1234500000_1", null,
                         100, "10000000_1000000_1_10000000", "10000000_0_1", "112340000_22340000_1", "1334500000_1244500000_1"),
                 Arguments.of(true, firstPool, 0, 1_00000000L, 100_00000000L, fullDuration-1,
                         "1200_1200_1_1200", "123000_0_1", "12340000_12340000_1", "1234500000_1234500000_1", null,
                         100, "100000000_10001080_1_100000000", "20000000_0_1", "112338800_22339880_1", "1334498800_1244499880_1")
-                        );
+        );
     }
 
     @ParameterizedTest(name = "{index} {1}")
@@ -189,6 +198,7 @@ public class VotingLiteTest {
     void firstVote(boolean statusOfTransaction, String poolAddresses, int periodId, long poolsVoteSWOPNew, long stakedSwop, int dateTransaction,
                    String initUserPool, String initUserTotal, String initPool, String initTotal, String dataTransOther,
                    int votingPower, String resultUserPool, String resultUserTotal, String resultPool, String resultTotal) {
+        node().waitNBlocks(periodLength);
         boolean successTx = true;
         initState(poolAddresses, dateTransaction, stakedSwop, initUserPool, initUserTotal, initPool, initTotal);
 
